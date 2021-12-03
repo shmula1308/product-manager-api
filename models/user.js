@@ -1,43 +1,55 @@
 const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt"); // npm package for hashing passwords
+const jwt = require("jsonwebtoken"); // npm package for creating authentication tokens
+const validator = require("validator"); //npm package with many methods for validating different things
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    trim: true,
-    default: "Hashim",
-  },
-  email: {
-    type: String,
-    trim: true,
-    required: true,
-  },
-  password: {
-    type: String,
-    required: true,
-  },
-  age: {
-    type: Number,
-    default: 0,
-  },
-  tokens: [
-    {
-      token: {
-        type: String,
-        required: true,
+const userSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      trim: true,
+      default: "Hashim",
+    },
+    email: {
+      type: String,
+      trim: true,
+      required: true,
+      unique: true,
+      validate(value) {
+        if (!validator.isEmail(value)) {
+          throw new Error("Email is invalid!");
+        }
       },
     },
-  ],
-});
+    password: {
+      type: String,
+      required: true,
+      minlength: 7,
+      validate(value) {
+        if (value.toLowerCase().includes("password")) {
+          throw new Error("Password must not contain 'password'!");
+        }
+      },
+    },
+    age: {
+      type: Number,
+      default: 0,
+    },
+    tokens: [
+      {
+        token: {
+          type: String,
+          required: true,
+        },
+      },
+    ],
+  },
+  {
+    timestamps: true,
+  }
+);
 
 // Functions added to the methods property of a schema get compiled into the Model prototype (Model is a class, don't forget) and exposed on each document instance:
-userSchema.methods.logName = function () {
-  const name = this.name;
-  return name + "123";
-};
 
 userSchema.methods.toJSON = function () {
   const user = this;
@@ -49,15 +61,14 @@ userSchema.methods.toJSON = function () {
 
 userSchema.methods.generateAuthToken = async function () {
   const user = this;
-  const token = jwt.sign({ _id: user.id.toString() }, JWT_SECRET);
-  user.tokens = user.tokens.concat({ token: token });
+  const token = jwt.sign({ _id: user.id.toString() }, process.env.JWT_SECRET);
+  user.tokens = user.tokens.concat({ token });
   await user.save();
   return token;
 };
 
 userSchema.statics.findByCredentials = async function (email, password) {
   const user = await User.findOne({ email });
-  console.log("findByCredential function", user);
   if (!user) {
     throw new Error("Unable to login!");
   }
