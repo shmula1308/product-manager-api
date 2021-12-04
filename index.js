@@ -7,10 +7,11 @@ const app = express();
 const PORT = process.env.PORT;
 
 app.use(express.json());
+//We are customizing our express server.This one line parses incoming json files to javascript objects. They are now accessible in our req.body
 app.use(userRouter);
 
-app.listen(PORT, (err) => {
+app.listen(PORT, () => {
   console.log(`Server up and running on port ${PORT}`);
 });
 
-// /Users/shpendmula/mongodb/bin/mongod --dbpath=/Users/shpendmula/mongodb-data
+// /Users/shpendmula/mongodb/bin/mongod --dbpath=/Users/shpendmula/mongodb-data  this starts the mongodb server(executable file name mongod)

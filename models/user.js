@@ -8,7 +8,6 @@ const userSchema = new mongoose.Schema(
     name: {
       type: String,
       trim: true,
-      default: "Hashim",
     },
     email: {
       type: String,
@@ -43,13 +42,17 @@ const userSchema = new mongoose.Schema(
         },
       },
     ],
+
+    avatar: {
+      type: Buffer,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Functions added to the methods property of a schema get compiled into the Model prototype (Model is a class, don't forget) and exposed on each document instance:
+//mongoose sets time one hour behind no matter what i do. fix problem
 
 userSchema.methods.toJSON = function () {
   const user = this;
