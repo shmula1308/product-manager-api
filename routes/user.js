@@ -36,6 +36,7 @@ router.post("/users", async (req, res) => {
 router.post("/users/login", async (req, res) => {
   try {
     const user = await User.findByCredentials(req.body.email, req.body.password);
+    console.log(user); // ok. toJSON did not run here yet. It runs when user is stringified, when it is sent with res.send()
     const token = await user.generateAuthToken();
     res.send({ user, token });
   } catch (error) {
@@ -44,7 +45,7 @@ router.post("/users/login", async (req, res) => {
 });
 
 //Logout user
-// Here user already has a token, which they provide with a header for authentication
+// Here user already has a token, which they provide with a header for authentication. Look at the bottom of page on why authentication is neede here
 router.post("/users/logout", auth, async (req, res) => {
   try {
     req.user.tokens = req.user.tokens.filter((token) => token.token !== req.token);
@@ -99,7 +100,7 @@ router.patch("/users/me", auth, async (req, res) => {
 });
 
 // Delete user
-// Don't orget we're using async/await beacuse we're interacting with a database. Alos whenever there is async/await use try/catch(one way to handle it)
+// Don't forget we're using async/await beacuse we're interacting with a database. Alos whenever there is async/await use try/catch(one way to handle it)
 router.delete("/users/me", auth, async (req, res) => {
   try {
     await req.user.remove();
@@ -108,6 +109,8 @@ router.delete("/users/me", auth, async (req, res) => {
     res.status(500).send();
   }
 });
+
+// Upload user avatar
 
 const upload = multer({
   limits: {
@@ -140,4 +143,45 @@ router.post(
   }
 );
 
+// Delete user avatar
+
+router.delete("/users/me/avatar", auth, async (req, res) => {
+  try {
+    req.user.avatar = undefined;
+    await req.user.save();
+    res.send();
+  } catch (e) {
+    res.status(500).send();
+  }
+});
+
+// Serve user avatar/just the avatar. We could get the avatar also by reading the user, a route which we already have. But here i guess we serve it converted to an image/png
+
+router.get("/users/:id/avatar", auth, async (req, res) => {
+  try {
+    const user = await User.findOne({ _id: req.params.id });
+
+    if (!user || !user.avatar) {
+      throw new Error();
+    }
+
+    res.set("Content-Type", "image/png"); //its not not global. just for this case. we're returning an image this time, not json(). Are we convertin binary data(buffer) to a png image here?
+
+    res.send(user.avatar);
+  } catch (e) {
+    res.status(404).send();
+  }
+});
+
+// The fourth argument which handles the error, is used in order to send an error message and not an html document
+
 module.exports = router;
+
+// Why do we need to authenticate on logout?
+// The short answer is you definitely must authenticate the /logout endpoint, to prevent an attacker from forcefully logging out all your users. If you do not validate this endpoint, anyone can logout any user. Hence this endpoint must be protected.
+
+// For the situation where both the access and refresh token are expired -- the user tries to go to a page, e.g. /account and your backend detects that the access token is expired, it will then re-direct to refresh endpoint, e.g. /refresh.
+
+// /refresh detects that the refresh token is also expired, and now redirects the user to the /login page. Once the user logs in, they'll get new refresh and access tokens, and all is well with the world again.
+
+// If you're keeping a list of all active refresh tokens, then you should update the list during the 2nd user log in, and not require a separate /logout to be called. However, these token list are typically only validated post token validation, which it won't be if the token is expired.
