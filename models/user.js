@@ -54,6 +54,12 @@ const userSchema = new mongoose.Schema(
 
 //mongoose sets time one hour behind no matter what i do. fix the problem if you can!
 
+userSchema.virtual("products", {
+  ref: "Product",
+  localField: "_id",
+  foreignField: "owner",
+});
+
 userSchema.methods.toJSON = function () {
   const user = this;
   const userObject = user.toObject();
